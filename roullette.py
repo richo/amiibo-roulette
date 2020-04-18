@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # Amiibo roullette
+import argparse
 import os
+import random
+import subprocess
 import sys
 import tempfile
-import subprocess
-import argparse
 
-
-PROMPT="pm3 -->"
 
 def mklog(c):
     def inner(m):
@@ -24,6 +23,9 @@ def arg_parser():
     parser.add_argument('--single', dest='single', action='store_true',
             default=False,
             help='Load the specified amiibo instead of random one')
+    parser.add_argument('--reveal', dest='reveal', action='store_true',
+            default=False,
+            help='Tell you which amiibo is being loaded if you hate surprises')
     parser.add_argument('--device', dest='device', action='store',
             default="/dev/ttyACM0",
             help='Use the specified device')
@@ -69,6 +71,14 @@ class ProxmarkWrapper(object):
         out, err = self.proxmark.communicate()
         log(out)
 
+def get_random_bin(path):
+    def bins():
+        for _, _, files in os.walk(path):
+            for filename in files:
+                if filename.endswith(".bin"):
+                    yield filename
+    return random.choice([bin in bins()])
+
 def main():
     parser = arg_parser()
     args = parser.parse_args()
@@ -76,6 +86,8 @@ def main():
         amiibo = args.source
     else:
         amiibo = get_random_bin(args.source)
+        if args.reveal:
+            log("Loading {}".format(amiibo))
 
     mfubin2eml = os.environ["MFUBIN2EML"]
     wrapper = Mfubin2emlWrapper(mfubin2eml)
