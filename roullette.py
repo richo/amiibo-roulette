@@ -73,11 +73,12 @@ class ProxmarkWrapper(object):
 
 def get_random_bin(path):
     def bins():
-        for _, _, files in os.walk(path):
+        for root, _, files in os.walk(path):
             for filename in files:
-                if filename.endswith(".bin"):
-                    yield filename
-    return random.choice([bin in bins()])
+                fullpath = os.path.join(root, filename)
+                if fullpath.endswith(".bin"):
+                    yield fullpath
+    return random.choice([bin for bin in bins()])
 
 def main():
     parser = arg_parser()
