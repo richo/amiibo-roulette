@@ -49,7 +49,7 @@ class Mfubin2emlWrapper(object):
         eml.flush()
 
         commands = err.splitlines()[-2:]
-        assert commands[0].startswith("hf mf eload u"), "Didn't get load commands correctly"
+        assert commands[0].startswith(b"hf mf eload u"), "Didn't get load commands correctly"
         assert os.path.exists(eml.name)
         return eml, commands[1]
 
