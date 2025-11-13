@@ -63,20 +63,23 @@ class ProxmarkWrapper(object):
     def load_eml(self, path):
         assert path.endswith(".eml"), "Path is not an eml file"
         # hf mfu eload -f u coco.eml
+        log("Loading EML")
         self.run("hf mfu eload -f {}".format(path))
 
     def simulate(self):
+        log("Simulating amiibo")
+        log("Press <proxmark button> to continue")
         self.run("hf mfu sim -t 7")
 
 
     def run(self, cmd):
-        log(cmd)
+        # Don't reveal who it is
+        # log("pm: {}".format(cmd))
         self.proxmark = subprocess.Popen([self.path, "-c", cmd],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 stdin=subprocess.PIPE)
         out, err = self.proxmark.communicate()
-        log(str(out))
 
 def get_random_file(path, suffix):
     def bins():
@@ -115,7 +118,10 @@ def main():
     # TODO(richo) Actually support this option again for proxmark3 instead of the pm3 wrapper
     pm.device = args.device
 
-    pm.load_eml(eml.name)
+    if args.process:
+        pm.load_eml(eml.name)
+    else:
+        pm.load_eml(eml)
     pm.simulate()
 
 if __name__ == '__main__':
