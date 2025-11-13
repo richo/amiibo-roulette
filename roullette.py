@@ -90,10 +90,12 @@ def get_random_file(path, suffix):
 def main():
     parser = arg_parser()
     args = parser.parse_args()
+    suffix = ".bin" if args.process else ".eml"
+
     if args.single:
         amiibo = args.source
+        assert amiibo.endswith(suffix), "Must specify file of type {}".format(suffix)
     else:
-        suffix = ".bin" if args.process else ".eml"
         amiibo = get_random_file(args.source, suffix)
         if args.reveal:
             log("Loading {}".format(amiibo))
@@ -110,9 +112,10 @@ def main():
 
     proxmark = os.environ["PROXMARK"]
     pm = ProxmarkWrapper(proxmark)
+    # TODO(richo) Actually support this option again for proxmark3 instead of the pm3 wrapper
     pm.device = args.device
 
-    pm.load_eml(eml)
+    pm.load_eml(eml.name)
     pm.simulate()
 
 if __name__ == '__main__':
