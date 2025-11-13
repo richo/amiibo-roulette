@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# Amiibo roullette
+#!/usr/bin/env python3
 import argparse
 import os
 import random
@@ -20,6 +19,9 @@ err = mklog('!')
 def arg_parser():
     parser = argparse.ArgumentParser(description='Load random amiibo')
     parser.add_argument('source', type=str, help='Source of amiibo to load')
+    parser.add_argument('--process', dest='process', action='store_true',
+                        default=False,
+                        help="Process the file with mfubin2eml before loading")
     parser.add_argument('--single', dest='single', action='store_true',
             default=False,
             help='Load the specified amiibo instead of random one')
@@ -60,23 +62,28 @@ class ProxmarkWrapper(object):
 
     def load_eml(self, path):
         assert path.endswith(".eml"), "Path is not an eml file"
-        self.run("hf mf eload u {}".format(path.replace(".eml", "")))
+        # hf mfu eload -f u coco.eml
+        self.run("hf mfu eload -f {}".format(path))
+
+    def simulate(self):
+        self.run("hf mfu sim -t 7")
+
 
     def run(self, cmd):
         log(cmd)
-        self.proxmark = subprocess.Popen([self.path, self.device, "-c", cmd],
+        self.proxmark = subprocess.Popen([self.path, "-c", cmd],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 stdin=subprocess.PIPE)
         out, err = self.proxmark.communicate()
-        log(out)
+        log(str(out))
 
-def get_random_bin(path):
+def get_random_file(path, suffix):
     def bins():
         for root, _, files in os.walk(path):
             for filename in files:
                 fullpath = os.path.join(root, filename)
-                if fullpath.endswith(".bin"):
+                if fullpath.endswith(suffix):
                     yield fullpath
     return random.choice([bin for bin in bins()])
 
@@ -86,21 +93,27 @@ def main():
     if args.single:
         amiibo = args.source
     else:
-        amiibo = get_random_bin(args.source)
+        suffix = ".bin" if args.process else ".eml"
+        amiibo = get_random_file(args.source, suffix)
         if args.reveal:
             log("Loading {}".format(amiibo))
 
-    mfubin2eml = os.environ["MFUBIN2EML"]
-    wrapper = Mfubin2emlWrapper(mfubin2eml)
-    eml, loadcommand = wrapper.convert(amiibo)
-    assert os.path.exists(eml.name)
+    if args.process:
+        mfubin2eml = os.environ["MFUBIN2EML"]
+        wrapper = Mfubin2emlWrapper(mfubin2eml)
+        # TODO(richo) verify this actually works
+        eml, loadcommand = wrapper.convert(amiibo)
+        assert os.path.exists(eml.name)
+    else:
+        eml = amiibo
+
 
     proxmark = os.environ["PROXMARK"]
     pm = ProxmarkWrapper(proxmark)
     pm.device = args.device
 
-    pm.load_eml(eml.name)
-    pm.run(loadcommand)
+    pm.load_eml(eml)
+    pm.simulate()
 
 if __name__ == '__main__':
     main()
